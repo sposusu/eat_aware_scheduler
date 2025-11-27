@@ -121,11 +121,42 @@ export default async function handler(req, res) {
         ...data
       }));
 
+      // Calculate totals and category breakdown
+      let grandTotal = 0;
+      const categoryTotals = {};
+      const userContributions = [];
+
+      for (const [id, data] of Object.entries(users)) {
+        const userTotal = data.totalPrice || 0;
+        grandTotal += userTotal;
+        userContributions.push({ id, total: userTotal });
+
+        // Aggregate categories from plates
+        if (data.plates) {
+          for (const plate of data.plates) {
+            for (const item of (plate.items || [])) {
+              const cat = item.category || 'Other';
+              const itemTotal = (item.price || 0) * (item.count || 1);
+              categoryTotals[cat] = (categoryTotals[cat] || 0) + itemTotal;
+            }
+          }
+        }
+      }
+
+      const byCategory = Object.entries(categoryTotals)
+        .map(([category, total]) => ({ category, total }))
+        .sort((a, b) => b.total - a.total);
+
       return res.status(200).json({
         byPrice: [...leaderboard].sort((a, b) => b.totalPrice - a.totalPrice).slice(0, 20),
         byCalories: [...leaderboard].sort((a, b) => b.totalCalories - a.totalCalories).slice(0, 20),
         byDishes: [...leaderboard].sort((a, b) => b.totalDishes - a.totalDishes).slice(0, 20),
-        byDrinks: [...leaderboard].sort((a, b) => (b.totalLiquid || 0) - (a.totalLiquid || 0)).slice(0, 20)
+        byDrinks: [...leaderboard].sort((a, b) => (b.totalLiquid || 0) - (a.totalLiquid || 0)).slice(0, 20),
+        stats: {
+          grandTotal,
+          byCategory,
+          byUser: userContributions.sort((a, b) => b.total - a.total).slice(0, 10)
+        }
       });
     }
 
