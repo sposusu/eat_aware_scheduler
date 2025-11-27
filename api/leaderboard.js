@@ -90,13 +90,24 @@ export default async function handler(req, res) {
       const { type } = req.query;
 
       if (type === 'dishes') {
-        // Get popular dishes
-        const dishData = await kv.get('dishData') || {};
-        const dishes = Object.entries(dishData).map(([name, data]) => ({
-          name,
-          count: data.count || 0,
-          price: data.price || 0
-        }));
+        // Get popular dishes - try new format first, fallback to old
+        let dishData = await kv.get('dishData');
+        if (dishData && Object.keys(dishData).length > 0) {
+          const dishes = Object.entries(dishData).map(([name, data]) => ({
+            name,
+            count: data.count || 0,
+            price: data.price || 0
+          }));
+          dishes.sort((a, b) => b.count - a.count);
+          return res.status(200).json({ dishes: dishes.slice(0, 50) });
+        }
+        // Fallback to old format
+        const dishList = await kv.get('dishList') || [];
+        const dishes = [];
+        for (const name of dishList) {
+          const count = await kv.get(`dish:${name}`) || 0;
+          dishes.push({ name, count, price: 0 });
+        }
         dishes.sort((a, b) => b.count - a.count);
         return res.status(200).json({ dishes: dishes.slice(0, 50) });
       }
