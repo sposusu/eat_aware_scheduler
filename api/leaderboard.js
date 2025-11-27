@@ -23,7 +23,7 @@ export default async function handler(req, res) {
 
       // Handle full history update (edit/delete)
       if (action === 'updateHistory' && updatedHistory) {
-        const drinksCount = updatedHistory.filter(i => i.category === 'Drink' || i.name?.includes('酒') || i.name?.includes('茶') || i.name?.includes('飲')).reduce((sum, i) => sum + (i.count || 1), 0);
+        const totalLiquid = updatedHistory.reduce((sum, i) => sum + ((i.ml || 0) * (i.count || 1)), 0);
         const dishesCount = updatedHistory.reduce((sum, i) => sum + (i.count || 1), 0);
         const newTotalPrice = updatedHistory.reduce((sum, i) => sum + ((i.price || 0) * (i.count || 1)), 0);
         const newTotalCalories = updatedHistory.reduce((sum, i) => sum + ((i.calories || 0) * (i.count || 1)), 0);
@@ -32,7 +32,7 @@ export default async function handler(req, res) {
           totalPrice: newTotalPrice,
           totalCalories: newTotalCalories,
           totalDishes: dishesCount,
-          totalDrinks: drinksCount,
+          totalLiquid: totalLiquid,
           plates: [{ items: updatedHistory, totalPrice: newTotalPrice, totalCalories: newTotalCalories, timestamp: Date.now() }]
         };
 
@@ -47,19 +47,19 @@ export default async function handler(req, res) {
         totalPrice: 0,
         totalCalories: 0,
         totalDishes: 0,
-        totalDrinks: 0,
+        totalLiquid: 0,
         plates: []
       };
 
-      // Calculate drinks count (items in 'Drink' category)
-      const drinksCount = (items || []).filter(i => i.category === 'Drink').reduce((sum, i) => sum + (i.count || 1), 0);
+      // Calculate liquid ml and dishes count
+      const liquidMl = (items || []).reduce((sum, i) => sum + ((i.ml || 0) * (i.count || 1)), 0);
       const dishesCount = (items || []).reduce((sum, i) => sum + (i.count || 1), 0);
 
       // Update user totals
       userData.totalPrice += totalPrice || 0;
       userData.totalCalories += totalCalories || 0;
       userData.totalDishes += dishesCount;
-      userData.totalDrinks += drinksCount;
+      userData.totalLiquid = (userData.totalLiquid || 0) + liquidMl;
       userData.plates.push({
         items,
         totalPrice,
@@ -130,7 +130,7 @@ export default async function handler(req, res) {
         byPrice: [...leaderboard].sort((a, b) => b.totalPrice - a.totalPrice).slice(0, 20),
         byCalories: [...leaderboard].sort((a, b) => b.totalCalories - a.totalCalories).slice(0, 20),
         byDishes: [...leaderboard].sort((a, b) => b.totalDishes - a.totalDishes).slice(0, 20),
-        byDrinks: [...leaderboard].sort((a, b) => b.totalDrinks - a.totalDrinks).slice(0, 20)
+        byDrinks: [...leaderboard].sort((a, b) => (b.totalLiquid || 0) - (a.totalLiquid || 0)).slice(0, 20)
       });
     }
 
