@@ -1,0 +1,14 @@
+{
+  "name": "nagomi-powerhal",
+  "version": "1.0.0",
+  "description": "NAGOMI PowerHAL - Eat Aware Scheduler (EAS)",
+  "private": true,
+  "scripts": {
+    "dev": "vercel dev",
+    "deploy": "vercel --prod"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "vercel": "^32.0.0"
+  }
+}
