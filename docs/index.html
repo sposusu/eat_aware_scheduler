@@ -110,7 +110,7 @@ const NagomiApp = () => {
   return (
     <div className="min-h-screen bg-stone-950 text-stone-100 font-sans selection:bg-amber-900">
       <div className="bg-stone-950 p-4 border-b border-stone-800 flex justify-between items-center sticky top-0 z-30">
-        <div className="flex items-center gap-2"><div className="bg-amber-600 p-2 rounded-lg"><Coins size={20} className="text-white" /></div><h1 className="font-bold text-lg tracking-wide text-amber-50">EAS 戰情室</h1></div>
+        <div className="flex items-center gap-2"><div className="bg-amber-600 p-2 rounded-lg"><Coins size={20} className="text-white" /></div><h1 className="font-bold text-lg tracking-wide text-amber-50">EAS (Eat Aware Scheduler)</h1></div>
         <div className="flex gap-2 items-center">
           <button onClick={() => { const newMode = priceMode === 'market' ? 'restaurant' : 'market'; setPriceMode(newMode); localStorage.setItem('nagomi_price_mode', newMode); }} className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-[10px] font-bold border transition-all ${priceMode === 'restaurant' ? 'bg-amber-900/30 border-amber-600 text-amber-500' : 'bg-stone-800 border-stone-700 text-stone-400'}`}>{priceMode === 'restaurant' ? <Utensils size={12} /> : <DollarSign size={12} />}{priceMode === 'restaurant' ? '飯店價' : '市價'}</button>
           <button onClick={() => setShowMenuGuide(true)} className="p-2 text-stone-400 hover:text-amber-400"><BookOpen size={20} /></button>
