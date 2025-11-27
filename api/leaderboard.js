@@ -86,6 +86,19 @@ export default async function handler(req, res) {
         return res.status(200).json({ dishes: dishes.slice(0, 50) });
       }
 
+      if (type === 'user') {
+        // Get specific user data
+        const { userId } = req.query;
+        if (!userId) {
+          return res.status(400).json({ error: 'userId required' });
+        }
+        const userData = await kv.hget('users', userId);
+        if (!userData) {
+          return res.status(200).json({ userData: null });
+        }
+        return res.status(200).json({ userData });
+      }
+
       // Get user leaderboard
       const users = await kv.hgetall('users') || {};
       const leaderboard = Object.entries(users).map(([id, data]) => ({
