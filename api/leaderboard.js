@@ -15,12 +15,32 @@ export default async function handler(req, res) {
 
   try {
     if (req.method === 'POST') {
-      // Submit plate data
-      const { userId, items, totalPrice, totalCalories, timestamp } = req.body;
+      const { userId, items, totalPrice, totalCalories, timestamp, action, updatedHistory } = req.body;
 
       if (!userId) {
         return res.status(400).json({ error: 'userId required' });
       }
+
+      // Handle full history update (edit/delete)
+      if (action === 'updateHistory' && updatedHistory) {
+        const drinksCount = updatedHistory.filter(i => i.category === 'Drink' || i.name?.includes('酒') || i.name?.includes('茶') || i.name?.includes('飲')).reduce((sum, i) => sum + (i.count || 1), 0);
+        const dishesCount = updatedHistory.reduce((sum, i) => sum + (i.count || 1), 0);
+        const newTotalPrice = updatedHistory.reduce((sum, i) => sum + ((i.price || 0) * (i.count || 1)), 0);
+        const newTotalCalories = updatedHistory.reduce((sum, i) => sum + ((i.calories || 0) * (i.count || 1)), 0);
+
+        const newUserData = {
+          totalPrice: newTotalPrice,
+          totalCalories: newTotalCalories,
+          totalDishes: dishesCount,
+          totalDrinks: drinksCount,
+          plates: [{ items: updatedHistory, totalPrice: newTotalPrice, totalCalories: newTotalCalories, timestamp: Date.now() }]
+        };
+
+        await kv.hset('users', { [userId]: newUserData });
+        return res.status(200).json({ success: true, userData: newUserData });
+      }
+
+      // Submit plate data (original behavior)
 
       // Get or create user data
       const userData = await kv.hget('users', userId) || {
