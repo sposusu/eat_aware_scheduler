@@ -117,49 +117,44 @@ export default async function handler(req, res) {
         return res.status(200).json({ userData });
       }
 
-      // Get user leaderboard
+      // Get user leaderboard - calculate both market and restaurant prices from plates
       const users = await kv.hgetall('users') || {};
-      const leaderboard = Object.entries(users).map(([id, data]) => ({
-        id,
-        ...data
-      }));
-
-      // Calculate totals and category breakdown
       let grandTotal = 0;
-      const categoryTotals = {};
-      const userContributions = [];
+      let grandTotalRestaurant = 0;
 
-      for (const [id, data] of Object.entries(users)) {
-        const userTotal = data.totalPrice || 0;
-        grandTotal += userTotal;
-        userContributions.push({ id, total: userTotal });
+      const leaderboard = Object.entries(users).map(([id, data]) => {
+        let totalPrice = 0;
+        let totalPriceRestaurant = 0;
+        let totalCalories = 0;
+        let totalDishes = 0;
+        let totalLiquid = 0;
 
-        // Aggregate categories from plates
         if (data.plates) {
           for (const plate of data.plates) {
             for (const item of (plate.items || [])) {
-              const cat = item.category || 'Other';
-              const itemTotal = (item.price || 0) * (item.count || 1);
-              categoryTotals[cat] = (categoryTotals[cat] || 0) + itemTotal;
+              const count = item.count || 1;
+              totalPrice += (item.price || 0) * count;
+              totalPriceRestaurant += (item.restaurantPrice || item.price || 0) * count;
+              totalCalories += (item.calories || 0) * count;
+              totalDishes += count;
+              totalLiquid += (item.ml || 0) * count;
             }
           }
         }
-      }
 
-      const byCategory = Object.entries(categoryTotals)
-        .map(([category, total]) => ({ category, total }))
-        .sort((a, b) => b.total - a.total);
+        grandTotal += totalPrice;
+        grandTotalRestaurant += totalPriceRestaurant;
+
+        return { id, totalPrice, totalPriceRestaurant, totalCalories, totalDishes, totalLiquid };
+      });
 
       return res.status(200).json({
         byPrice: [...leaderboard].sort((a, b) => b.totalPrice - a.totalPrice).slice(0, 20),
+        byPriceRestaurant: [...leaderboard].sort((a, b) => b.totalPriceRestaurant - a.totalPriceRestaurant).slice(0, 20),
         byCalories: [...leaderboard].sort((a, b) => b.totalCalories - a.totalCalories).slice(0, 20),
         byDishes: [...leaderboard].sort((a, b) => b.totalDishes - a.totalDishes).slice(0, 20),
         byDrinks: [...leaderboard].sort((a, b) => (b.totalLiquid || 0) - (a.totalLiquid || 0)).slice(0, 20),
-        stats: {
-          grandTotal,
-          byCategory,
-          byUser: userContributions.sort((a, b) => b.total - a.total).slice(0, 10)
-        }
+        stats: { grandTotal, grandTotalRestaurant }
       });
     }
 
