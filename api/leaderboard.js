@@ -70,42 +70,35 @@ export default async function handler(req, res) {
       // Save user data
       await kv.hset('users', { [userId]: userData });
 
-      // Update dish popularity with price info
-      const dishData = await kv.get('dishData') || {};
-      for (const item of (items || [])) {
-        if (item.name) {
-          const existing = dishData[item.name] || { count: 0, price: 0 };
-          dishData[item.name] = {
-            count: existing.count + (item.count || 1),
-            price: item.price || existing.price || 0
-          };
-        }
-      }
-      await kv.set('dishData', dishData);
-
       return res.status(200).json({ success: true, userData });
     }
 
     if (req.method === 'GET') {
       const { type } = req.query;
 
-      if (type === 'cleanup') {
-        // Delete old format data
-        const dishList = await kv.get('dishList') || [];
-        for (const name of dishList) {
-          await kv.del(`dish:${name}`);
-        }
-        await kv.del('dishList');
-        return res.status(200).json({ success: true, deleted: dishList.length });
-      }
-
       if (type === 'dishes') {
-        // Get popular dishes
-        const dishData = await kv.get('dishData') || {};
-        const dishes = Object.entries(dishData).map(([name, data]) => ({
+        // Calculate popular dishes from all users' plates
+        const users = await kv.hgetall('users') || {};
+        const dishTotals = {};
+        for (const data of Object.values(users)) {
+          if (data.plates) {
+            for (const plate of data.plates) {
+              for (const item of (plate.items || [])) {
+                if (item.name) {
+                  const existing = dishTotals[item.name] || { count: 0, price: 0 };
+                  dishTotals[item.name] = {
+                    count: existing.count + (item.count || 1),
+                    price: item.price || existing.price || 0
+                  };
+                }
+              }
+            }
+          }
+        }
+        const dishes = Object.entries(dishTotals).map(([name, data]) => ({
           name,
-          count: data.count || 0,
-          price: data.price || 0
+          count: data.count,
+          price: data.price
         }));
         dishes.sort((a, b) => b.count - a.count);
         return res.status(200).json({ dishes: dishes.slice(0, 50) });
