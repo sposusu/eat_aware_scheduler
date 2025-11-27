@@ -70,23 +70,18 @@ export default async function handler(req, res) {
       // Save user data
       await kv.hset('users', { [userId]: userData });
 
-      // Update dish popularity
+      // Update dish popularity with price info
+      const dishData = await kv.get('dishData') || {};
       for (const item of (items || [])) {
         if (item.name) {
-          const dishKey = `dish:${item.name}`;
-          const currentCount = await kv.get(dishKey) || 0;
-          await kv.set(dishKey, currentCount + (item.count || 1));
+          const existing = dishData[item.name] || { count: 0, price: 0 };
+          dishData[item.name] = {
+            count: existing.count + (item.count || 1),
+            price: item.price || existing.price || 0
+          };
         }
       }
-
-      // Update dish list for popularity ranking
-      const dishList = await kv.get('dishList') || [];
-      for (const item of (items || [])) {
-        if (item.name && !dishList.includes(item.name)) {
-          dishList.push(item.name);
-        }
-      }
-      await kv.set('dishList', dishList);
+      await kv.set('dishData', dishData);
 
       return res.status(200).json({ success: true, userData });
     }
@@ -96,12 +91,12 @@ export default async function handler(req, res) {
 
       if (type === 'dishes') {
         // Get popular dishes
-        const dishList = await kv.get('dishList') || [];
-        const dishes = [];
-        for (const name of dishList) {
-          const count = await kv.get(`dish:${name}`) || 0;
-          dishes.push({ name, count });
-        }
+        const dishData = await kv.get('dishData') || {};
+        const dishes = Object.entries(dishData).map(([name, data]) => ({
+          name,
+          count: data.count || 0,
+          price: data.price || 0
+        }));
         dishes.sort((a, b) => b.count - a.count);
         return res.status(200).json({ dishes: dishes.slice(0, 50) });
       }
