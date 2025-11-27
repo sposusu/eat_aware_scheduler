@@ -56,25 +56,39 @@ Instructions:
       generationConfig: { response_mime_type: "application/json" }
     };
 
-    // Call Gemini API
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
+    // Call Gemini API with fallback
+    const models = ['gemini-2.5-flash', 'gemini-2.5-pro'];
+    let lastError = null;
+
+    for (const model of models) {
+      try {
+        const response = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GEMINI_API_KEY}`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          }
+        );
+
+        const data = await response.json();
+
+        if (data.error) {
+          lastError = data.error.message;
+          console.log(`${model} failed: ${lastError}, trying fallback...`);
+          continue;
+        }
+
+        const result = JSON.parse(data.candidates[0].content.parts[0].text);
+        return res.status(200).json(result);
+      } catch (e) {
+        lastError = e.message;
+        console.log(`${model} failed: ${lastError}, trying fallback...`);
+        continue;
       }
-    );
-
-    const data = await response.json();
-
-    if (data.error) {
-      return res.status(500).json({ error: data.error.message });
     }
 
-    // Parse and return the result
-    const result = JSON.parse(data.candidates[0].content.parts[0].text);
-    return res.status(200).json(result);
+    return res.status(500).json({ error: lastError || 'All models failed' });
 
   } catch (error) {
     console.error('Analyze error:', error);
