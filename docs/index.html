@@ -165,10 +165,11 @@ const NagomiApp = () => {
     ctx.fillStyle = '#fbbf24'; ctx.font = 'bold 64px sans-serif'; ctx.textAlign = 'center';
     ctx.fillText(`$${totalStats.price.toLocaleString()}`, W/2, statsTop + 70);
     ctx.fillStyle = '#a8a29e'; ctx.font = '28px sans-serif';
-    ctx.fillText(`${history.reduce((a,b)=>a+(b.count||1),0)} 道 · ${totalStats.calories.toLocaleString()} kcal · ${totalStats.liquids} 杯`, W/2, statsTop + 115);
+    ctx.fillText(`${history.reduce((a,b)=>a+(b.count||1),0)} 道 · ${totalStats.calories.toLocaleString()} kcal · ${totalStats.liquids} ml`, W/2, statsTop + 115);
     const roi = budget > 0 ? Math.round((totalStats.price / budget) * 100) : 0;
+    const efficiency = totalStats.calories > 0 ? (totalStats.price / totalStats.calories).toFixed(2) : 0;
     ctx.fillStyle = roi >= 100 ? '#22c55e' : '#ef4444'; ctx.font = 'bold 36px sans-serif';
-    ctx.fillText(`回本率 ${roi}%`, W/2, statsTop + 170);
+    ctx.fillText(`回本率 ${roi}% · 效率 $${efficiency}/kcal`, W/2, statsTop + 170);
     // Footer
     ctx.fillStyle = '#57534e'; ctx.font = '20px sans-serif';
     ctx.fillText('EAS (Eat Aware Scheduler)', W/2, H - 30);
