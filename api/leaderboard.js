@@ -85,10 +85,11 @@ export default async function handler(req, res) {
             for (const plate of data.plates) {
               for (const item of (plate.items || [])) {
                 if (item.name) {
-                  const existing = dishTotals[item.name] || { count: 0, price: 0 };
+                  const existing = dishTotals[item.name] || { count: 0, price: 0, restaurantPrice: 0 };
                   dishTotals[item.name] = {
                     count: existing.count + (item.count || 1),
-                    price: item.price || existing.price || 0
+                    price: item.price || existing.price || 0,
+                    restaurantPrice: item.restaurantPrice || existing.restaurantPrice || 0
                   };
                 }
               }
@@ -98,7 +99,8 @@ export default async function handler(req, res) {
         const dishes = Object.entries(dishTotals).map(([name, data]) => ({
           name,
           count: data.count,
-          price: data.price
+          price: data.price,
+          restaurantPrice: data.restaurantPrice
         }));
         dishes.sort((a, b) => b.count - a.count);
         return res.status(200).json({ dishes: dishes.slice(0, 50) });
