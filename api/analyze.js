@@ -88,8 +88,16 @@ OUTPUT FORMAT (strict JSON):
           continue;
         }
 
+        // Check if we have valid response structure
+        if (!data.candidates || !data.candidates[0] || !data.candidates[0].content || !data.candidates[0].content.parts) {
+          lastError = `Invalid response structure: ${JSON.stringify(data).slice(0, 200)}`;
+          console.log(`${model} failed: ${lastError}`);
+          continue;
+        }
+
         // Extract and sanitize JSON response
         let jsonText = data.candidates[0].content.parts[0].text;
+        console.log(`${model} raw response: ${jsonText.slice(0, 500)}`);
 
         // Remove markdown code blocks if present
         jsonText = jsonText.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim();
@@ -100,7 +108,14 @@ OUTPUT FORMAT (strict JSON):
           jsonText = jsonMatch[0];
         }
 
-        const result = JSON.parse(jsonText);
+        let result;
+        try {
+          result = JSON.parse(jsonText);
+        } catch (parseError) {
+          lastError = `JSON parse error: ${parseError.message}. Raw: ${jsonText.slice(0, 200)}`;
+          console.log(`${model} failed: ${lastError}`);
+          continue;
+        }
 
         // Validate result structure
         if (!result.items || !Array.isArray(result.items)) {
@@ -115,7 +130,8 @@ OUTPUT FORMAT (strict JSON):
       }
     }
 
-    return res.status(500).json({ error: lastError || 'All models failed' });
+    console.error('All models failed. Last error:', lastError);
+    return res.status(500).json({ error: lastError || 'All models failed', details: 'Check Vercel logs for more info' });
 
   } catch (error) {
     console.error('Analyze error:', error);
