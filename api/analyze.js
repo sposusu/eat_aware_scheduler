@@ -36,24 +36,33 @@ export default async function handler(req, res) {
       .map(item => `- ${item.name}: ~$${item.price > 0 ? item.price : Math.round(item.restaurantPrice / 1.5)}`)
       .join('\n');
 
-    const systemPrompt = `Context: User is eating at NAGOMI Buffet. Goal: Identify food, count items, estimate value.
-DB:
+    const systemPrompt = `You are analyzing a buffet meal photo. The image may contain ONE or MULTIPLE plates/dishes.
+
+MENU DATABASE:
 ${menuString}
-Instructions:
-1. Identify items.
-2. ESTIMATE COUNT (e.g., 3 slices). Default 1.
-3. Return JSON: { items: [{name, price, calories, count}], comment }`;
+
+INSTRUCTIONS:
+1. Identify ALL visible food items across ALL plates in the image
+2. For each item, estimate the COUNT (e.g., 3 pieces of sushi, 2 slices of fish). Default to 1 if unclear.
+3. Match items to the menu database when possible
+4. Return ONLY valid JSON, no markdown, no code blocks
+
+OUTPUT FORMAT (strict JSON):
+{"items":[{"name":"item name","price":0,"calories":0,"count":1}],"comment":"brief observation"}`;
 
     // Prepare payload for Gemini API
     const payload = {
       contents: [{
         parts: [
           { text: systemPrompt },
-          { text: "Analyze image. Return JSON: { items: [{name, price, calories, count}], comment }" },
+          { text: "Analyze this image. Identify ALL food items on ALL plates. Return valid JSON only." },
           { inline_data: { mime_type: "image/jpeg", data: image } }
         ]
       }],
-      generationConfig: { response_mime_type: "application/json" }
+      generationConfig: {
+        response_mime_type: "application/json",
+        max_output_tokens: 4096
+      }
     };
 
     // Call Gemini API with fallback
@@ -79,7 +88,25 @@ Instructions:
           continue;
         }
 
-        const result = JSON.parse(data.candidates[0].content.parts[0].text);
+        // Extract and sanitize JSON response
+        let jsonText = data.candidates[0].content.parts[0].text;
+
+        // Remove markdown code blocks if present
+        jsonText = jsonText.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim();
+
+        // Try to find JSON object in the response
+        const jsonMatch = jsonText.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          jsonText = jsonMatch[0];
+        }
+
+        const result = JSON.parse(jsonText);
+
+        // Validate result structure
+        if (!result.items || !Array.isArray(result.items)) {
+          result.items = [];
+        }
+
         return res.status(200).json(result);
       } catch (e) {
         lastError = e.message;
