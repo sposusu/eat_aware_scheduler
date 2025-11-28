@@ -255,7 +255,7 @@ const NagomiApp = () => {
           </div>))}
         </div>
         <input type="file" accept="image/*" multiple ref={shareInputRef} className="hidden" onChange={handleSharePhotos} /></div>
-        <div className="bg-stone-900 border border-stone-700 rounded-xl p-4"><div className="text-stone-400 text-xs mb-2">預覽資訊</div><div className="text-center"><div className="text-2xl font-black text-amber-400">${calculateTotal(history).price.toLocaleString()}</div><div className="text-stone-500 text-sm">{history.reduce((a,b)=>a+(b.count||1),0)} 道 · {calculateTotal(history).calories} kcal</div><div className="text-stone-600 text-xs mt-1">{new Date().toLocaleDateString('zh-TW', { year: 'numeric', month: 'long', day: 'numeric' })}</div></div></div>
+        <div className="bg-stone-900 border border-stone-700 rounded-xl p-4"><div className="text-stone-400 text-xs mb-2">預覽資訊</div><div className="text-center"><div className="text-2xl font-black text-amber-400">${calculateTotal(history).price.toLocaleString()}</div><div className="text-stone-500 text-sm">{history.reduce((a,b)=>a+(b.count||1),0)} 道 · {calculateTotal(history).calories} kcal · {calculateTotal(history).liquids} ml</div><div className="text-stone-600 text-xs mt-1">{new Date().toLocaleDateString('zh-TW', { year: 'numeric', month: 'long', day: 'numeric' })}</div></div></div>
         <button onClick={generateShareImage} disabled={sharePhotos.length === 0} className={`w-full py-4 rounded-xl font-bold flex items-center justify-center gap-2 ${sharePhotos.length > 0 ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white' : 'bg-stone-800 text-stone-500'}`}><Download size={20} /> 匯出圖片</button>
         <canvas ref={canvasRef} className="hidden" />
       </div></div></div>)}
